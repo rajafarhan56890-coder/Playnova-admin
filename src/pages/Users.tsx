@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Filter, Ban, Edit2, CheckCircle2 } from 'lucide-react';
+import { Search, Filter, Ban, Edit2, CheckCircle2, User as UserIcon } from 'lucide-react';
 import { collection, getDocs, updateDoc, doc, query, orderBy, limit, startAfter, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { User, UserRole } from '../types';
 import { Button } from '../components/ui/Button';
@@ -193,6 +194,13 @@ export const Users: React.FC = () => {
                             <CheckCircle2 className="h-4 w-4" />
                           </button>
                         )}
+                        <Link 
+                          to={`/users/${user.id}`}
+                          className="p-1.5 text-zinc-500 hover:text-indigo-400 transition-colors inline-block" 
+                          title="View Profile"
+                        >
+                          <UserIcon className="h-4 w-4" />
+                        </Link>
                         <button 
                           onClick={() => handleEditRole(user)}
                           className="p-1.5 text-zinc-500 hover:text-indigo-400 transition-colors" 

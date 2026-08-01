@@ -1,12 +1,12 @@
 {
-  "projectId": "playnova-76b15",
-  "appId": "1:191232631951:web:8d4ccb9e94426e05293cfa",
-  "apiKey": "AIzaSyCrPp-A96ITYWAJ7O2sEGVk-eM3gQSiewM",
-  "authDomain": "playnova-76b15.firebaseapp.com",
-  "firestoreDatabaseId": "(default)",
-  "storageBucket": "playnova-76b15.firebasestorage.app",
-  "messagingSenderId": "191232631951",
-  "measurementId": "G-4ZKX4T9E9G",
-  "oAuthClientId": "",
+  "projectId": "gen-lang-client-0917534886",
+  "appId": "1:686370347250:web:9a647c83f81b28f35e986b",
+  "apiKey": "AIzaSyCo4FGbZzyln4-8Azzc7Xq1C33Z8jVI_G0",
+  "authDomain": "gen-lang-client-0917534886.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-playnovaadmin-f73c7c22-8d05-4ec6-9832-48ec0dfdb9c5",
+  "storageBucket": "gen-lang-client-0917534886.firebasestorage.app",
+  "messagingSenderId": "686370347250",
+  "measurementId": "",
+  "oAuthClientId": "686370347250-3pbvgeur50su7okpv9ieiefhlmktjpre.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }

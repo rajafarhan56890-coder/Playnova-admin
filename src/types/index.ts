@@ -71,6 +71,8 @@ export type AppSettings = {
   minWithdrawal: number;
   referralBonus: number;
   maintenanceMode: boolean;
+  coinsToPKR: number;
+  coinsToUSD: number;
   updatedAt: number;
 };
 
@@ -81,4 +83,13 @@ export type ActivityLog = {
   action: string;
   details: string;
   timestamp: number;
+};
+
+export type UserComment = {
+  id: string;
+  userId: string;
+  adminId: string;
+  adminName: string;
+  comment: string;
+  createdAt: number;
 };
