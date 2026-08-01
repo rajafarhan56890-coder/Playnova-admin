@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Search, Plus, Edit2, Trash2 } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Search, Plus, Edit2, Trash2, Upload, X, Link as LinkIcon } from 'lucide-react';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import toast from 'react-hot-toast';
-import { db } from '../lib/firebase';
+import { db, storage } from '../lib/firebase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
@@ -15,10 +16,17 @@ export const Games: React.FC = () => {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
+  
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     imageUrl: '',
+    gameUrl: '',
     category: '',
     rewardPoints: 0,
     isActive: true,
@@ -44,22 +52,27 @@ export const Games: React.FC = () => {
   }, []);
 
   const handleOpenModal = (game?: Game) => {
+    setImageFile(null);
     if (game) {
       setEditingGame(game);
+      setImagePreview(game.imageUrl || '');
       setFormData({
-        name: game.name,
-        description: game.description,
-        imageUrl: game.imageUrl,
-        category: game.category,
-        rewardPoints: game.rewardPoints,
-        isActive: game.isActive,
+        name: game.name || '',
+        description: game.description || '',
+        imageUrl: game.imageUrl || '',
+        gameUrl: game.gameUrl || '',
+        category: game.category || '',
+        rewardPoints: game.rewardPoints || 0,
+        isActive: game.isActive ?? true,
       });
     } else {
       setEditingGame(null);
+      setImagePreview('');
       setFormData({
         name: '',
         description: '',
         imageUrl: '',
+        gameUrl: '',
         category: '',
         rewardPoints: 0,
         isActive: true,
@@ -68,15 +81,52 @@ export const Games: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('Image size should be less than 2MB');
+        return;
+      }
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUploadingImage(true);
+    
     try {
+      let finalImageUrl = formData.imageUrl;
+      
+      if (imageFile) {
+        const storageRef = ref(storage, `games/${Date.now()}_${imageFile.name}`);
+        const snapshot = await uploadBytes(storageRef, imageFile);
+        finalImageUrl = await getDownloadURL(snapshot.ref);
+      }
+      
+      if (!finalImageUrl && !editingGame) {
+        toast.error('Please select an image for the game');
+        setUploadingImage(false);
+        return;
+      }
+
+      const dataToSave = {
+        ...formData,
+        imageUrl: finalImageUrl,
+      };
+
       if (editingGame) {
-        await updateDoc(doc(db, 'games', editingGame.id), formData);
+        await updateDoc(doc(db, 'games', editingGame.id), dataToSave);
         toast.success('Game updated successfully');
       } else {
         await addDoc(collection(db, 'games'), {
-          ...formData,
+          ...dataToSave,
           addedAt: Date.now(),
         });
         toast.success('Game added successfully');
@@ -86,6 +136,8 @@ export const Games: React.FC = () => {
     } catch (error) {
       console.error('Error saving game:', error);
       toast.error('Failed to save game');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -136,11 +188,22 @@ export const Games: React.FC = () => {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {filteredGames.map((game) => (
-            <div key={game.id} className="group relative overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50 transition-all hover:border-zinc-700">
-              <div className="aspect-video w-full overflow-hidden bg-zinc-800">
+            <div key={game.id} className="group relative overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50 transition-all hover:border-zinc-700 flex flex-col">
+              <div className="aspect-video w-full overflow-hidden bg-zinc-800 relative">
                 <img src={game.imageUrl} alt={game.name} className="h-full w-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                {game.gameUrl && (
+                  <a 
+                    href={game.gameUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="absolute top-2 right-2 p-2 bg-black/60 rounded-lg text-white hover:bg-indigo-600 transition-colors"
+                    title="Play Game"
+                  >
+                    <LinkIcon className="h-4 w-4" />
+                  </a>
+                )}
               </div>
-              <div className="p-5">
+              <div className="p-5 flex-1 flex flex-col">
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="font-semibold text-white text-lg">{game.name}</h3>
@@ -153,7 +216,7 @@ export const Games: React.FC = () => {
                   </span>
                 </div>
                 
-                <div className="mt-4 flex items-center justify-between text-sm">
+                <div className="mt-4 flex items-center justify-between text-sm flex-1">
                   <div className="flex items-center text-indigo-400 font-medium">
                     <span className="text-zinc-500 mr-2">Reward:</span>
                     {game.rewardPoints} pts
@@ -185,6 +248,32 @@ export const Games: React.FC = () => {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-1">Game Image</label>
+            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-zinc-700 border-dashed rounded-lg bg-zinc-900 hover:bg-zinc-800/50 transition-colors relative overflow-hidden group">
+              {imagePreview ? (
+                <div className="absolute inset-0 w-full h-full">
+                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Button type="button" variant="secondary" size="sm" onClick={() => { setImageFile(null); setImagePreview(''); if(fileInputRef.current) fileInputRef.current.value = ''; }}>
+                      <X className="mr-2 h-4 w-4" /> Remove
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1 text-center">
+                  <Upload className="mx-auto h-12 w-12 text-zinc-500" />
+                  <div className="flex text-sm text-zinc-400 justify-center">
+                    <label htmlFor="file-upload" className="relative cursor-pointer rounded-md font-medium text-indigo-500 hover:text-indigo-400 focus-within:outline-none">
+                      <span>Upload a file</span>
+                      <input id="file-upload" name="file-upload" type="file" className="sr-only" ref={fileInputRef} onChange={handleImageChange} accept="image/*" />
+                    </label>
+                  </div>
+                  <p className="text-xs text-zinc-500">PNG, JPG, GIF up to 2MB</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
             <label className="block text-sm font-medium text-zinc-400 mb-1">Game Name</label>
             <Input 
               required 
@@ -201,11 +290,12 @@ export const Games: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1">Image URL</label>
+            <label className="block text-sm font-medium text-zinc-400 mb-1">Game URL (Link to play)</label>
             <Input 
-              required 
-              value={formData.imageUrl} 
-              onChange={e => setFormData({...formData, imageUrl: e.target.value})} 
+              type="url"
+              placeholder="https://..."
+              value={formData.gameUrl} 
+              onChange={e => setFormData({...formData, gameUrl: e.target.value})} 
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -242,9 +332,9 @@ export const Games: React.FC = () => {
           </div>
           
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-zinc-800">
-            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit">
-              {editingGame ? 'Save Changes' : 'Add Game'}
+            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)} disabled={uploadingImage}>Cancel</Button>
+            <Button type="submit" disabled={uploadingImage}>
+              {uploadingImage ? 'Saving...' : (editingGame ? 'Save Changes' : 'Add Game')}
             </Button>
           </div>
         </form>
@@ -252,3 +342,4 @@ export const Games: React.FC = () => {
     </div>
   );
 };
+

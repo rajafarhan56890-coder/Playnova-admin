@@ -19,6 +19,7 @@ export type Game = {
   name: string;
   description: string;
   imageUrl: string;
+  gameUrl?: string;
   isActive: boolean;
   rewardPoints: number;
   category: string;
