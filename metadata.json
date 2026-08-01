@@ -1,0 +1,6 @@
+{
+  "name": "PlayNova Admin",
+  "description": "Secure admin dashboard for the PlayNova gaming rewards app.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
